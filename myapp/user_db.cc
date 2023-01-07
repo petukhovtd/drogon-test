@@ -40,4 +40,14 @@ namespace myapp
         auto user = it->second.lock();
         return user;
     }
+
+    UserDb::UserDbConstIt UserDb::begin() const
+    {
+        return db_.cbegin();
+    }
+
+    UserDb::UserDbConstIt UserDb::end() const
+    {
+        return db_.cend();
+    }
 }

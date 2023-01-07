@@ -16,8 +16,10 @@ namespace myapp
 
         const std::string &GetLogin() const;
 
+        const std::string &GetPasswordHash() const;
+
         bool CheckPassword(const std::string &password) const;
-        
+
         UserId GetId() const;
 
     private:

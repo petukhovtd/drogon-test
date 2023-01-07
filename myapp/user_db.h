@@ -11,6 +11,10 @@ namespace myapp
         using UserWeak = std::weak_ptr<UserPtr::element_type>;
 
     public:
+        using UserDbType = std::unordered_map<UserId, UserPtr>;
+        using UserDbConstIt = UserDbType::const_iterator;
+        using UserDbIt = UserDbType::iterator;
+
         explicit UserDb();
 
         virtual ~UserDb() = default;
@@ -20,6 +24,10 @@ namespace myapp
         UserPtr GetUser(UserId id) const;
 
         UserPtr GetUser(const std::string &login) const;
+
+        UserDbConstIt begin() const;
+
+        UserDbConstIt end() const;
 
     private:
         std::unordered_map<UserId, UserPtr> db_;
