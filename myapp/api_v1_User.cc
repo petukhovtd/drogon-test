@@ -1,5 +1,6 @@
 #include <myapp/api_v1_User.h>
 #include <myapp/checkers.h>
+#include <myapp/api_keys.h>
 
 #include <cpp-base64/base64.h>
 
@@ -18,7 +19,6 @@ void User::Create(const HttpRequestPtr &request, Callback &&callback)
 {
     LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort();
 
-    Json::Value responseJsonBody;
     auto requestJsonBody = request->getJsonObject();
 
     if (!requestJsonBody)
@@ -26,7 +26,7 @@ void User::Create(const HttpRequestPtr &request, Callback &&callback)
         myapp::Error error(myapp::Error::Code::ExpectJsonBody);
         LOG_ERROR << error.GetMessage();
 
-        ErrorRequest(HttpStatusCode::k400BadRequest, {error}, callback);
+        ErrorResponse(HttpStatusCode::k400BadRequest, {error}, callback);
         return;
     }
 
@@ -62,7 +62,7 @@ void User::Create(const HttpRequestPtr &request, Callback &&callback)
         }
     }
 
-    if (ErrorRequest(HttpStatusCode::k400BadRequest, errors, callback))
+    if (ErrorResponse(HttpStatusCode::k400BadRequest, errors, callback))
     {
         return;
     }
@@ -70,12 +70,9 @@ void User::Create(const HttpRequestPtr &request, Callback &&callback)
     auto user = userDb_->AddUser(username, password);
     if (!user)
     {
-        myapp::Error error(myapp::Error::Code::UserAlreadyExist);
+        myapp::Error error(myapp::Error::Code::UserAlreadyExist, {{myapp::key::username, username}});
         LOG_ERROR << error.GetMessage();
-        auto response = HttpResponse::newHttpJsonResponse(error.GetJson());
-        response->setStatusCode(HttpStatusCode::k404NotFound);
-
-        callback(response);
+        ErrorResponse(HttpStatusCode::k404NotFound, {error}, callback);
         return;
     }
 
@@ -83,10 +80,10 @@ void User::Create(const HttpRequestPtr &request, Callback &&callback)
              << ", password: \"" << password << "\""
              << ", id: \"" << user->GetId() << "\"";
 
-    responseJsonBody["user_id"] = static_cast<Json::UInt64>(user->GetId());
-    auto response = HttpResponse::newHttpJsonResponse(responseJsonBody);
-    response->setStatusCode(k201Created);
-    callback(response);
+    Json::Value response;
+    response["user_id"] = static_cast<Json::UInt64>(user->GetId());
+
+    JsonResponse(k201Created, response, callback);
 }
 
 void User::List(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback)
@@ -141,7 +138,7 @@ void User::Change(const HttpRequestPtr &request, std::function<void(const HttpRe
     callback(response);
 }
 
-bool User::ErrorRequest(HttpStatusCode code, const std::vector<myapp::Error> &errors, Callback &callback)
+bool User::ErrorResponse(HttpStatusCode code, const std::vector<myapp::Error> &errors, Callback &callback)
 {
     if (errors.empty())
     {
@@ -157,11 +154,16 @@ bool User::ErrorRequest(HttpStatusCode code, const std::vector<myapp::Error> &er
     Json::Value jsonResponse;
     jsonResponse["error"] = errorArray;
 
-    auto response = HttpResponse::newHttpJsonResponse(jsonResponse);
-    response->setStatusCode(code);
-    callback(response);
+    JsonResponse(code, jsonResponse, callback);
 
     return true;
+}
+
+void User::JsonResponse(HttpStatusCode code, const Json::Value &json, Callback &callback)
+{
+    auto response = HttpResponse::newHttpJsonResponse(json);
+    response->setStatusCode(code);
+    callback(response);
 }
 
 std::variant<myapp::UserPtr, Json::Value> User::AuthorizateUser(const HttpRequestPtr &request) const

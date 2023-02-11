@@ -38,7 +38,9 @@ namespace api
       void Change(const HttpRequestPtr &request, Callback &&callback, std::string userId);
 
     private:
-      bool ErrorRequest( HttpStatusCode code, const std::vector< myapp::Error >& errors, Callback &callback);
+      bool ErrorResponse( HttpStatusCode code, const std::vector< myapp::Error >& errors, Callback &callback);
+
+      void JsonResponse( HttpStatusCode code, const Json::Value &json, Callback &callback);
 
       std::variant<myapp::UserPtr, Json::Value> AuthorizateUser(const HttpRequestPtr &request) const;
 

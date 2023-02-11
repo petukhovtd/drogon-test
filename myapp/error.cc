@@ -25,11 +25,13 @@ namespace myapp
             {Code::ExpectJsonBody, "expect json body"},
 
             {Code::UsernameNotFound, "username key not found"},
+            {Code::UsernameIsNotString, "username is not string"},
             {Code::UsernameInvalidSize, "username have invalid size"},
             {Code::UsernameBeginWithDot, "username begin with dot"},
             {Code::UsernameContainInvalidChar, "username contain invalid char"},
 
             {Code::PasswordNotFound, "password key not found"},
+            {Code::PasswordIsNotString, "password is not string"},
             {Code::PassowrdInvalidSize, "password have invalid size"},
             {Code::PasswordContainInvalidChar, "password contain invalid char"},
 

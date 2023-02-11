@@ -17,11 +17,13 @@ namespace myapp
             ExpectJsonBody,
 
             UsernameNotFound,
+            UsernameIsNotString,
             UsernameInvalidSize,
             UsernameBeginWithDot,
             UsernameContainInvalidChar,
 
             PasswordNotFound,
+            PasswordIsNotString,
             PassowrdInvalidSize,
             PasswordContainInvalidChar,
 

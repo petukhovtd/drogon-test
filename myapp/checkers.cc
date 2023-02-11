@@ -1,18 +1,27 @@
 #include <myapp/checkers.h>
+#include <myapp/api_keys.h>
 
 #include <algorithm>
 #include <sstream>
 
 namespace myapp
 {
-    std::optional<std::string> GetUsername(const Json::Value &json)
+    std::variant<std::string, Error> GetUsername(const Json::Value &json)
     {
-        if (!json.isMember("username"))
+        static std::string key = key::username;
+        const auto val = json.find(key.data(), key.data() + key.length());
+        if (!val)
         {
-            return std::nullopt;
+            return Error(Error::Code::UsernameNotFound,
+                         {{"expect", key}});
         }
 
-        return json.get("username", "").asString();
+        if (!val->isString())
+        {
+            return Error(Error::Code::UsernameIsNotString);
+        }
+
+        return val->asString();
     }
 
     std::optional<Error> CheckUsername(const std::string &username)
@@ -53,28 +62,41 @@ namespace myapp
 
     std::variant<std::string, Error> ExtractUsername(const Json::Value &json)
     {
-        const auto usernameOpt = GetUsername(json);
-        if (!usernameOpt.has_value())
+        const auto usernameOrError = GetUsername(json);
+        if (std::holds_alternative<std::string>(usernameOrError))
         {
-            return Error(Error::Code::UsernameNotFound);
-        }
-        const auto checkResult = CheckUsername(usernameOpt.value());
-        if (checkResult.has_value())
-        {
-            return checkResult.value();
-        }
+            std::string username = std::get<std::string>(usernameOrError);
 
-        return usernameOpt.value();
+            const auto checkResult = CheckUsername(username);
+            if (checkResult.has_value())
+            {
+                return checkResult.value();
+            }
+
+            return username;
+        }
+        else
+        {
+            return std::get<Error>(usernameOrError);
+        }
     }
 
-    std::optional<std::string> GetPassword(const Json::Value &json)
+    std::variant<std::string, Error> GetPassword(const Json::Value &json)
     {
-        if (!json.isMember("password"))
+        static std::string key = key::password;
+        const auto val = json.find(key.data(), key.data() + key.length());
+        if (!val)
         {
-            return std::nullopt;
+            return Error(Error::Code::PasswordNotFound,
+                         {{"expect", key}});
         }
 
-        return json.get("password", "").asString();
+        if (!val->isString())
+        {
+            return Error(Error::Code::PasswordIsNotString);
+        }
+
+        return val->asString();
     }
 
     std::optional<Error> CheckPassword(const std::string &password)
@@ -110,17 +132,22 @@ namespace myapp
 
     std::variant<std::string, Error> ExtractPassword(const Json::Value &json)
     {
-        const auto passwordOpt = GetPassword(json);
-        if (!passwordOpt.has_value())
+        const auto passwordOrError = GetPassword(json);
+        if (std::holds_alternative<std::string>(passwordOrError))
         {
-            return Error(Error::Code::PasswordNotFound);
-        }
-        const auto checkResult = CheckPassword(passwordOpt.value());
-        if (checkResult.has_value())
-        {
-            return checkResult.value();
-        }
+            std::string password = std::get<std::string>(passwordOrError);
 
-        return passwordOpt.value();
+            const auto checkResult = CheckPassword(password);
+            if (checkResult.has_value())
+            {
+                return checkResult.value();
+            }
+
+            return password;
+        }
+        else
+        {
+            return std::get<Error>(passwordOrError);
+        }
     }
 } // namespace myapp

@@ -8,13 +8,13 @@
 
 namespace myapp
 {
-    std::optional<std::string> GetUsername(const Json::Value &json);
+    std::variant<std::string, Error> GetUsername(const Json::Value &json);
 
     std::optional<Error> CheckUsername(const std::string &username);
 
     std::variant<std::string, Error> ExtractUsername(const Json::Value &json);
 
-    std::optional<std::string> GetPassword(const Json::Value &json);
+    std::variant<std::string, Error> GetPassword(const Json::Value &json);
     
     std::optional<Error> CheckPassword(const std::string &password);
 
