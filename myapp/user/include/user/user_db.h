@@ -29,6 +29,12 @@ namespace myapp
 
         UserDbConstIt end() const;
 
+        UserDbIt begin();
+
+        UserDbIt end();
+
+        size_t size() const;
+
     private:
         std::unordered_map<UserId, UserPtr> db_;
         std::unordered_map<std::string, UserWeak> loginIndex_;

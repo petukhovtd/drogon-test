@@ -24,16 +24,11 @@ namespace myapp
         static const std::unordered_map<Code, std::string> messageMap{
             {Code::ExpectJsonBody, "expect json body"},
 
-            {Code::UsernameNotFound, "username key not found"},
-            {Code::UsernameIsNotString, "username is not string"},
-            {Code::UsernameInvalidSize, "username have invalid size"},
-            {Code::UsernameBeginWithDot, "username begin with dot"},
-            {Code::UsernameContainInvalidChar, "username contain invalid char"},
+            {Code::ConvertParameterFailed, "convert parameter failed"},
 
-            {Code::PasswordNotFound, "password key not found"},
-            {Code::PasswordIsNotString, "password is not string"},
-            {Code::PassowrdInvalidSize, "password have invalid size"},
-            {Code::PasswordContainInvalidChar, "password contain invalid char"},
+            {Code::KeyNotFound, "key not found"},
+            {Code::InvalidType, "invalid type"},
+            {Code::InvalidValue, "invalid value"},
 
             {Code::UserAlreadyExist, "user already exist"},
         };

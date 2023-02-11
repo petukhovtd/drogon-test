@@ -81,28 +81,116 @@ void User::Create(const HttpRequestPtr &request, Callback &&callback)
              << ", id: \"" << user->GetId() << "\"";
 
     Json::Value response;
-    response["user_id"] = static_cast<Json::UInt64>(user->GetId());
+    response[myapp::key::userId] = static_cast<Json::UInt64>(user->GetId());
 
     JsonResponse(k201Created, response, callback);
 }
 
-void User::List(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback)
+void User::List(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback, std::string limitParam, std::string offsetParam)
 {
-    LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort();
+    LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
+              << ", limit: " << limitParam << ", offset: " << offsetParam;
+
+    std::vector<myapp::Error> errors;
+
+    std::optional<size_t> limitOpt = std::nullopt;
+    if (!limitParam.empty())
+    {
+        limitOpt = myapp::Extract<size_t>(limitParam);
+        if (!limitOpt.has_value())
+        {
+            myapp::Error error(myapp::Error::Code::ConvertParameterFailed, {{"key", "limit"}});
+            LOG_ERROR << error.GetMessage();
+            errors.push_back(error);
+        }
+    }
+
+    std::optional<size_t> offsetOpt = std::nullopt;
+    if (!offsetParam.empty())
+    {
+        offsetOpt = myapp::Extract<size_t>(offsetParam);
+        if (!offsetOpt.has_value())
+        {
+            myapp::Error error(myapp::Error::Code::ConvertParameterFailed, {{"key", "offset"}});
+            LOG_ERROR << error.GetMessage();
+            errors.push_back(error);
+        }
+    }
+
+    if (ErrorResponse(HttpStatusCode::k400BadRequest, errors, callback))
+    {
+        return;
+    }
+
+    size_t total = userDb_->size();
+    size_t offset = 0;
+    size_t limit = total;
+    size_t size = total;
+    size_t end = total;
+
+    if (offsetOpt.has_value())
+    {
+        offset = offsetOpt.value();
+    }
+
+    if (limitOpt.has_value())
+    {
+        limit = limitOpt.value();
+        end = offset + limit;
+        if (end > total)
+        {
+            end = total;
+        }
+    }
+
+    if (offset > total)
+    {
+        size = 0;
+    }
+    else
+    {
+        size = end - offset;
+    }
 
     Json::Value responseJsonBody;
     responseJsonBody["users"] = Json::arrayValue;
-
-    for (const auto &userIt : *userDb_)
+    responseJsonBody["size"] = static_cast<unsigned int>(size);
+    responseJsonBody["total"] = static_cast<unsigned int>(total);
+    if (offsetOpt.has_value())
     {
-        Json::Value userJson;
-        userJson["user_id"] = static_cast<Json::UInt64>(userIt.first);
-        userJson["username"] = userIt.second->GetUsername();
+        responseJsonBody["offset"] = static_cast<unsigned int>(offset);
+    }
+    if (limitOpt.has_value())
+    {
+        responseJsonBody["limit"] = static_cast<unsigned int>(limit);
+    }
 
+    if (0 == size)
+    {
+        LOG_INFO << "Empty response";
+        JsonResponse(k200OK, responseJsonBody, callback);
+        return;
+    }
+
+    std::vector<myapp::UserPtr> users;
+    for (auto [id, user] : *userDb_)
+    {
+        users.push_back(user);
+    }
+
+    std::sort(users.begin(), users.end(), [](const myapp::UserPtr &lhs, const myapp::UserPtr &rhs)
+              { return lhs->GetId() < rhs->GetId(); });
+
+    for (size_t i = offset; i < end; ++i)
+    {
+        const myapp::UserPtr &user = users[i];
+        Json::Value userJson;
+        userJson[myapp::key::userId] = static_cast<Json::UInt64>(user->GetId());
+        userJson[myapp::key::username] = user->GetUsername();
         responseJsonBody["users"].append(userJson);
     }
 
-    LOG_INFO << "User list. response size: " << responseJsonBody["users"].size();
+    LOG_INFO << "User list. response size: " << size;
 
     auto response = HttpResponse::newHttpJsonResponse(responseJsonBody);
     response->setStatusCode(k200OK);
@@ -112,7 +200,7 @@ void User::List(const HttpRequestPtr &request, std::function<void(const HttpResp
 void User::Change(const HttpRequestPtr &request, std::function<void(const HttpResponsePtr &)> &&callback, std::string userId)
 {
     LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
-              << ", userId: " << userId << "";
+              << ", userId: " << userId;
 
     auto authRes = AuthorizateUser(request);
     if (std::holds_alternative<myapp::UserPtr>(authRes))

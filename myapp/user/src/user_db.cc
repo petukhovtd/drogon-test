@@ -50,4 +50,19 @@ namespace myapp
     {
         return db_.cend();
     }
+
+    UserDb::UserDbIt UserDb::begin()
+    {
+        return db_.begin();
+    }
+
+    UserDb::UserDbIt UserDb::end()
+    {
+        return db_.end();
+    }
+
+    size_t UserDb::size() const
+    {
+        return db_.size();
+    }
 }

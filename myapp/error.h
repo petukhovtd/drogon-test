@@ -16,16 +16,11 @@ namespace myapp
         {
             ExpectJsonBody,
 
-            UsernameNotFound,
-            UsernameIsNotString,
-            UsernameInvalidSize,
-            UsernameBeginWithDot,
-            UsernameContainInvalidChar,
+            ConvertParameterFailed,
 
-            PasswordNotFound,
-            PasswordIsNotString,
-            PassowrdInvalidSize,
-            PasswordContainInvalidChar,
+            KeyNotFound,
+            InvalidType,
+            InvalidValue,
 
             UserAlreadyExist,
         };

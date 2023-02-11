@@ -28,13 +28,13 @@ namespace api
       METHOD_LIST_BEGIN
 
       METHOD_ADD(User::Create, "/create", Post);
-      METHOD_ADD(User::List, "/list", Get);
+      METHOD_ADD(User::List, "/list?limit={1}&offset={2}", Get);
       METHOD_ADD(User::Change, "/{1}", Get, Post);
 
       METHOD_LIST_END
 
       void Create(const HttpRequestPtr &request, Callback &&callback);
-      void List(const HttpRequestPtr &request, Callback &&callback);
+      void List(const HttpRequestPtr &request, Callback &&callback, std::string limit, std::string offset);
       void Change(const HttpRequestPtr &request, Callback &&callback, std::string userId);
 
     private:

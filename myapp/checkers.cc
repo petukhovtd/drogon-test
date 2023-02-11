@@ -12,13 +12,14 @@ namespace myapp
         const auto val = json.find(key.data(), key.data() + key.length());
         if (!val)
         {
-            return Error(Error::Code::UsernameNotFound,
-                         {{"expect", key}});
+            return Error(Error::Code::KeyNotFound,
+                         {{"key", key}});
         }
 
         if (!val->isString())
         {
-            return Error(Error::Code::UsernameIsNotString);
+            return Error(Error::Code::InvalidType, {{"key", key},
+                                                    {"type", "string"}});
         }
 
         return val->asString();
@@ -31,8 +32,10 @@ namespace myapp
 
         if (username.size() < minUsernameSize || maxUsernameSize < username.size())
         {
-            return Error(Error::Code::UsernameInvalidSize,
+            return Error(Error::Code::InvalidValue,
                          {
+                             {"key", key::username},
+                             {"property", "size"},
                              {"min", std::to_string(minUsernameSize)},
                              {"max", std::to_string(maxUsernameSize)},
                              {"current", std::to_string(username.size())},
@@ -41,7 +44,10 @@ namespace myapp
 
         if (*username.begin() == '.')
         {
-            return Error(Error::Code::UsernameBeginWithDot);
+            return Error(Error::Code::InvalidValue, {
+                                                        {"key", key::username},
+                                                        {"property", "begin with dot"},
+                                                    });
         }
 
         const auto it = std::find_if_not(username.begin(), username.end(), [](unsigned char c)
@@ -50,8 +56,10 @@ namespace myapp
         {
             std::ostringstream os;
             os << std::hex << static_cast<int>(*it);
-            return Error(Error::Code::UsernameContainInvalidChar,
+            return Error(Error::Code::InvalidValue,
                          {
+                             {"key", key::username},
+                             {"property", "contain invalid char"},
                              {"pos", std::to_string(std::distance(username.begin(), it))},
                              {"hex", os.str()},
                          });
@@ -87,13 +95,14 @@ namespace myapp
         const auto val = json.find(key.data(), key.data() + key.length());
         if (!val)
         {
-            return Error(Error::Code::PasswordNotFound,
-                         {{"expect", key}});
+            return Error(Error::Code::KeyNotFound,
+                         {{"key", key}});
         }
 
         if (!val->isString())
         {
-            return Error(Error::Code::PasswordIsNotString);
+            return Error(Error::Code::InvalidType, {{"key", key},
+                                                    {"type", "string"}});
         }
 
         return val->asString();
@@ -106,8 +115,10 @@ namespace myapp
 
         if (password.size() < minPasswordSize || maxPasswordSize < password.size())
         {
-            return Error(Error::Code::PassowrdInvalidSize,
+            return Error(Error::Code::InvalidValue,
                          {
+                             {"key", key::password},
+                             {"property", "size"},
                              {"min", std::to_string(minPasswordSize)},
                              {"max", std::to_string(maxPasswordSize)},
                              {"current", std::to_string(password.size())},
@@ -120,8 +131,10 @@ namespace myapp
         {
             std::ostringstream os;
             os << std::hex << static_cast<int>(*it);
-            return Error(Error::Code::PasswordContainInvalidChar,
+            return Error(Error::Code::InvalidValue,
                          {
+                             {"key", key::password},
+                             {"property", "contain invalid char"},
                              {"pos", std::to_string(std::distance(password.begin(), it))},
                              {"hex", os.str()},
                          });
