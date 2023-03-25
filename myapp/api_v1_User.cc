@@ -202,28 +202,62 @@ void User::Change(const HttpRequestPtr &request, std::function<void(const HttpRe
     LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
               << ", userId: " << userId;
 
+    std::vector<myapp::Error> errors;
+
+    auto userIdOpt = myapp::Extract<myapp::UserId>(userId);
+    if (!userIdOpt.has_value())
+    {
+        myapp::Error error(myapp::Error::Code::ConvertParameterFailed);
+        LOG_ERROR << error.GetMessage();
+        errors.push_back(error);
+    }
+
     auto authRes = AuthorizateUser(request);
     if (std::holds_alternative<myapp::UserPtr>(authRes))
     {
+        // good
     }
-    else if (std::holds_alternative<Json::Value>(authRes))
+    else if (std::holds_alternative<myapp::Error>(authRes))
     {
-        auto errorJson = std::get<Json::Value>(authRes);
-        auto response = HttpResponse::newHttpJsonResponse(errorJson);
+        auto error = std::get<myapp::Error>(authRes);
+        auto response = HttpResponse::newHttpJsonResponse(error.GetJson());
         response->addHeader("WWW-Authenticate", "Basic");
         response->setStatusCode(k401Unauthorized);
         callback(response);
         return;
     }
 
-    if (request->getMethod() == Get)
+    myapp::UserPtr user = std::get<myapp::UserPtr>(authRes);
+    if (userIdOpt.has_value())
     {
-        Json::Value responseJson;
+        if (user->GetId() != userIdOpt.value())
+        {
+            auto error = myapp::Error(myapp::Error::Code::InvalidUserId, {{"why", "authorization user and parameter not equal"}});
+            LOG_ERROR << error.GetMessage();
+            errors.push_back(error);
+        }
     }
 
-    auto response = HttpResponse::newHttpResponse();
-    response->setStatusCode(k200OK);
-    callback(response);
+    if (ErrorResponse(HttpStatusCode::k400BadRequest, errors, callback))
+    {
+        return;
+    }
+
+    auto processRes = UserMethodProcess(request->getMethod(), *user);
+    if (std::holds_alternative<Json::Value>(processRes))
+    {
+        auto responseJson = std::get<Json::Value>(processRes);
+        JsonResponse(k200OK, responseJson, callback);
+        return;
+    }
+    else if (std::holds_alternative<std::vector<myapp::Error>>(processRes))
+    {
+        auto responseError = std::get<std::vector<myapp::Error>>(processRes);
+        ErrorResponse(HttpStatusCode::k400BadRequest, errors, callback);
+        return;
+    }
+
+    User::HttpResponse(k400BadRequest, callback);
 }
 
 bool User::ErrorResponse(HttpStatusCode code, const std::vector<myapp::Error> &errors, Callback &callback)
@@ -254,13 +288,20 @@ void User::JsonResponse(HttpStatusCode code, const Json::Value &json, Callback &
     callback(response);
 }
 
-std::variant<myapp::UserPtr, Json::Value> User::AuthorizateUser(const HttpRequestPtr &request) const
+void User::HttpResponse(HttpStatusCode code, Callback &callback)
+{
+    auto response = HttpResponse::newHttpResponse();
+    response->setStatusCode(code);
+    callback(response);
+}
+
+std::variant<myapp::UserPtr, myapp::Error> User::AuthorizateUser(const HttpRequestPtr &request) const
 {
     const auto &auth = request->getHeader("Authorization");
     if (auth.empty())
     {
-        Json::Value error;
-        error["message"] = "authorization header not found";
+        auto error = myapp::Error(myapp::Error::Code::AuthorizateFailed, {{"why", "Authorization header don't found"}});
+        LOG_ERROR << error.GetMessage();
         return error;
     }
 
@@ -270,25 +311,28 @@ std::variant<myapp::UserPtr, Json::Value> User::AuthorizateUser(const HttpReques
         size_t pos = authStr.find(' ');
         if (pos == std::string::npos)
         {
-            Json::Value error;
-            error["message"] = "invalid authorization header";
+            auto error = myapp::Error(myapp::Error::Code::AuthorizateFailed, {{"why", "invalid authorization header"}});
+            LOG_ERROR << error.GetMessage();
             return error;
         }
         std::string_view authType = authStr.substr(0, pos);
         if (authType != "Basic")
         {
-            Json::Value error;
-            error["message"] = "authorization type not Basic";
+            auto error = myapp::Error(myapp::Error::Code::AuthorizateFailed, {{"why", "authorization type not Basic"}});
+            LOG_ERROR << error.GetMessage();
             return error;
         }
         credinalsBase = authStr.substr(++pos);
     }
-    std::string_view credentials = base64_decode(credinalsBase);
+
+    std::string credentialsStr = base64_decode(credinalsBase);
+    std::string_view credentials(credentialsStr);
+
     size_t pos = credentials.find(':');
     if (pos == std::string::npos)
     {
-        Json::Value error;
-        error["message"] = "invalid autorization credentials";
+        auto error = myapp::Error(myapp::Error::Code::AuthorizateFailed, {{"why", "invalid autorization credentials"}});
+        LOG_ERROR << error.GetMessage();
         return error;
     }
     std::string_view name = credentials.substr(0, pos);
@@ -297,15 +341,45 @@ std::variant<myapp::UserPtr, Json::Value> User::AuthorizateUser(const HttpReques
     auto user = userDb_->GetUser(std::string(name));
     if (!user)
     {
-        Json::Value error;
-        error["message"] = "user not found";
+        auto error = myapp::Error(myapp::Error::Code::AuthorizateFailed, {{"why", "user not found"}});
+        LOG_ERROR << error.GetMessage();
         return error;
     }
     if (!user->CheckPassword(std::string(password)))
     {
-        Json::Value error;
-        error["message"] = "invalid password";
+        auto error = myapp::Error(myapp::Error::Code::AuthorizateFailed, {{"why", "invalid password"}});
+        LOG_ERROR << error.GetMessage();
         return error;
     }
     return user;
+}
+
+std::variant<Json::Value, std::vector<myapp::Error>> User::UserMethodProcess(HttpMethod method, myapp::User &user)
+{
+    std::vector<myapp::Error> errors;
+
+    switch (method)
+    {
+    case Get:
+        return GetUser(user);
+    case Put:
+    case Patch:
+    case Delete:
+    default:
+        return errors;
+    }
+
+    return errors;
+}
+
+Json::Value User::GetUser(const myapp::User &user)
+{
+    Json::Value result;
+
+    result[myapp::key::userId] = static_cast<Json::UInt64>(user.GetId());
+    result[myapp::key::username] = user.GetUsername();
+    result[myapp::key::info::firstName] = user.GetInfo().firstName;
+    result[myapp::key::info::lastName] = user.GetInfo().lastName;
+
+    return result;
 }

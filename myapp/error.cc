@@ -31,6 +31,8 @@ namespace myapp
             {Code::InvalidValue, "invalid value"},
 
             {Code::UserAlreadyExist, "user already exist"},
+            
+            {Code::AuthorizateFailed, "authorizate failed"},
         };
 
         const auto it = messageMap.find(ec_);

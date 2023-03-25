@@ -23,6 +23,10 @@ namespace myapp
             InvalidValue,
 
             UserAlreadyExist,
+
+            AuthorizateFailed,
+
+            InvalidUserId,
         };
 
         explicit Error(Code ec);
