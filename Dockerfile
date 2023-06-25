@@ -19,5 +19,5 @@ RUN apt-get update && \
 COPY . /app
 WORKDIR /app
 RUN cd build && rm -r ./* && cmake .. && cmake --build . --config Debug --target all -j 10 --
-CMD [ "./build/drogon-test" ] 
+CMD [ "./build/myapp/myapp" ] 
 EXPOSE 3000
