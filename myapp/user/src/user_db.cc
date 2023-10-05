@@ -41,6 +41,55 @@ namespace myapp
         return user;
     }
 
+    void UserDb::DeleteUser(UserId id)
+    {
+        const auto userPtr = GetUser(id);
+        if(!userPtr)
+        {
+            return;
+        }
+        DeleteUser(*userPtr);
+    }
+
+    void UserDb::DeleteUser(const std::string &username)
+    {
+        const auto userPtr = GetUser(username);
+        if(!userPtr)
+        {
+            return;
+        }
+        DeleteUser(*userPtr);
+    }
+
+    void UserDb::DeleteUser(const User &user)
+    {
+        db_.erase(user.GetId());
+        loginIndex_.erase(user.GetUsername());
+    }
+
+    UserPtr UserDb::ChangeUsername(const User &user, const std::string &newUsername)
+    {
+        const auto it = loginIndex_.find(newUsername);
+        if(loginIndex_.end() != it)
+        {
+            return nullptr;
+        }
+        auto newUser = std::make_shared<User>(user, newUsername);
+        db_[user.GetId()] = newUser;
+        loginIndex_.erase(user.GetUsername());
+        loginIndex_[newUser->GetUsername()]=newUser;
+        return newUser;
+    }
+
+    UserPtr UserDb::ChangePassword(const User &user, const std::string &newPassword)
+    {
+        auto newUser = std::make_shared<User>(user.GetUsername(), newPassword, user.GetId());
+        newUser->SetInfo(user.GetInfo());
+        db_[user.GetId()] = newUser;
+        loginIndex_[user.GetUsername()] = newUser;
+        return newUser;
+    }
+
     UserDb::UserDbConstIt UserDb::begin() const
     {
         return db_.cbegin();
@@ -65,4 +114,5 @@ namespace myapp
     {
         return db_.size();
     }
+
 }

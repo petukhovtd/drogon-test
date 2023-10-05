@@ -25,6 +25,16 @@ namespace myapp
 
         UserPtr GetUser(const std::string &username) const;
 
+        void DeleteUser(UserId id);
+
+        void DeleteUser(const std::string& username);
+
+        void DeleteUser(const User& user);
+
+        UserPtr ChangeUsername(const User& user, const std::string& newUsername);
+
+        UserPtr ChangePassword(const User& user, const std::string& newPassword);
+
         UserDbConstIt begin() const;
 
         UserDbConstIt end() const;

@@ -5,7 +5,7 @@ add_subdirectory(user)
 set(SOURCE
     error.cc
     checkers.cc
-    api_v1_User.cc
+        api_v1_user.cc
 )
 
 add_executable(${PROJECT_NAME} myapp.cpp ${SOURCE})

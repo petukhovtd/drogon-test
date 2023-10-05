@@ -1,4 +1,4 @@
-#include <myapp/api_v1_User.h>
+#include <myapp/api_v1_user.h>
 #include <myapp/checkers.h>
 #include <myapp/api_keys.h>
 
@@ -202,14 +202,13 @@ void User::Change(const HttpRequestPtr &request, std::function<void(const HttpRe
     LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
               << ", userId: " << userId;
 
-    std::vector<myapp::Error> errors;
-
     auto userIdOpt = myapp::Extract<myapp::UserId>(userId);
     if (!userIdOpt.has_value())
     {
         myapp::Error error(myapp::Error::Code::ConvertParameterFailed);
         LOG_ERROR << error.GetMessage();
-        errors.push_back(error);
+        ErrorResponse(k400BadRequest, {error}, callback);
+        return;
     }
 
     auto authRes = AuthorizateUser(request);
@@ -234,6 +233,92 @@ void User::Change(const HttpRequestPtr &request, std::function<void(const HttpRe
         {
             auto error = myapp::Error(myapp::Error::Code::InvalidUserId, {{"why", "authorization user and parameter not equal"}});
             LOG_ERROR << error.GetMessage();
+            ErrorResponse(k400BadRequest, {error}, callback);
+            return;
+        }
+    }
+
+    auto processResult = UserMethodProcess(request, *user);
+    if (std::holds_alternative<ResponseData>(processResult))
+    {
+        auto responseData = std::get<ResponseData>(processResult);
+        JsonResponse(responseData.code, responseData.body, callback);
+        return;
+    }
+    else if (std::holds_alternative<std::vector<myapp::Error>>(processResult))
+    {
+        auto responseErrors = std::get<std::vector<myapp::Error>>(processResult);
+        ErrorResponse(HttpStatusCode::k400BadRequest, responseErrors, callback);
+        return;
+    }
+
+    User::HttpResponse(k400BadRequest, callback);
+}
+
+
+void User::ChangeUsername(const HttpRequestPtr &request, Callback &&callback, std::string userId)
+{
+    LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
+              << ", userId: " << userId;
+
+    auto userIdOpt = myapp::Extract<myapp::UserId>(userId);
+    if (!userIdOpt.has_value())
+    {
+        myapp::Error error(myapp::Error::Code::ConvertParameterFailed);
+        LOG_ERROR << error.GetMessage();
+        ErrorResponse(k400BadRequest, {error}, callback);
+        return;
+    }
+
+    auto requestJsonBody = request->getJsonObject();
+    if (!requestJsonBody)
+    {
+        myapp::Error error(myapp::Error::Code::ExpectJsonBody);
+        LOG_ERROR << error.GetMessage();
+
+        ErrorResponse(HttpStatusCode::k400BadRequest, {error}, callback);
+        return;
+    }
+
+    auto authRes = AuthorizateUser(request);
+    if (std::holds_alternative<myapp::UserPtr>(authRes))
+    {
+        // good
+    }
+    else if (std::holds_alternative<myapp::Error>(authRes))
+    {
+        auto error = std::get<myapp::Error>(authRes);
+        auto response = HttpResponse::newHttpJsonResponse(error.GetJson());
+        response->addHeader("WWW-Authenticate", "Basic");
+        response->setStatusCode(k401Unauthorized);
+        callback(response);
+        return;
+    }
+
+    myapp::UserPtr user = std::get<myapp::UserPtr>(authRes);
+    if (userIdOpt.has_value())
+    {
+        if (user->GetId() != userIdOpt.value())
+        {
+            auto error = myapp::Error(myapp::Error::Code::InvalidUserId, {{"why", "authorization user and parameter not equal"}});
+            LOG_ERROR << error.GetMessage();
+            ErrorResponse(k400BadRequest, {error}, callback);
+            return;
+        }
+    }
+
+    std::vector<myapp::Error> errors;
+    std::string username;
+    {
+        const auto usernameVariant = myapp::ExtractUsername(*requestJsonBody);
+        if (std::holds_alternative<std::string>(usernameVariant))
+        {
+            username = std::get<std::string>(usernameVariant);
+        }
+        else
+        {
+            const auto &error = std::get<myapp::Error>(usernameVariant);
+            LOG_ERROR << error.GetMessage();
             errors.push_back(error);
         }
     }
@@ -243,21 +328,101 @@ void User::Change(const HttpRequestPtr &request, std::function<void(const HttpRe
         return;
     }
 
-    auto processRes = UserMethodProcess(request->getMethod(), *user);
-    if (std::holds_alternative<Json::Value>(processRes))
+    const auto newUser = userDb_->ChangeUsername(*user, username);
+    if(!newUser)
     {
-        auto responseJson = std::get<Json::Value>(processRes);
-        JsonResponse(k200OK, responseJson, callback);
-        return;
-    }
-    else if (std::holds_alternative<std::vector<myapp::Error>>(processRes))
-    {
-        auto responseError = std::get<std::vector<myapp::Error>>(processRes);
-        ErrorResponse(HttpStatusCode::k400BadRequest, errors, callback);
+        myapp::Error error(myapp::Error::Code::UserAlreadyExist, {{myapp::key::username, username}});
+        LOG_ERROR << error.GetMessage();
+        ErrorResponse(HttpStatusCode::k404NotFound, {error}, callback);
         return;
     }
 
-    User::HttpResponse(k400BadRequest, callback);
+    Json::Value userJson;
+    userJson[myapp::key::userId] = static_cast<Json::UInt64>(newUser->GetId());
+    userJson[myapp::key::username] = newUser->GetUsername();
+
+    auto response = HttpResponse::newHttpJsonResponse(userJson);
+    response->setStatusCode(k200OK);
+    callback(response);
+}
+
+void User::ChangePassword(const HttpRequestPtr &request, User::Callback &&callback, std::string userId)
+{
+    LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
+              << ", userId: " << userId;
+
+    auto userIdOpt = myapp::Extract<myapp::UserId>(userId);
+    if (!userIdOpt.has_value())
+    {
+        myapp::Error error(myapp::Error::Code::ConvertParameterFailed);
+        LOG_ERROR << error.GetMessage();
+        ErrorResponse(k400BadRequest, {error}, callback);
+        return;
+    }
+
+    auto requestJsonBody = request->getJsonObject();
+    if (!requestJsonBody)
+    {
+        myapp::Error error(myapp::Error::Code::ExpectJsonBody);
+        LOG_ERROR << error.GetMessage();
+
+        ErrorResponse(HttpStatusCode::k400BadRequest, {error}, callback);
+        return;
+    }
+
+    auto authRes = AuthorizateUser(request);
+    if (std::holds_alternative<myapp::UserPtr>(authRes))
+    {
+        // good
+    }
+    else if (std::holds_alternative<myapp::Error>(authRes))
+    {
+        auto error = std::get<myapp::Error>(authRes);
+        auto response = HttpResponse::newHttpJsonResponse(error.GetJson());
+        response->addHeader("WWW-Authenticate", "Basic");
+        response->setStatusCode(k401Unauthorized);
+        callback(response);
+        return;
+    }
+
+    myapp::UserPtr user = std::get<myapp::UserPtr>(authRes);
+    if (userIdOpt.has_value())
+    {
+        if (user->GetId() != userIdOpt.value())
+        {
+            auto error = myapp::Error(myapp::Error::Code::InvalidUserId, {{"why", "authorization user and parameter not equal"}});
+            LOG_ERROR << error.GetMessage();
+            ErrorResponse(k400BadRequest, {error}, callback);
+            return;
+        }
+    }
+
+    std::vector<myapp::Error> errors;
+    std::string password;
+    {
+        const auto passwordVariant = myapp::ExtractPassword(*requestJsonBody);
+        if (std::holds_alternative<std::string>(passwordVariant))
+        {
+            password = std::get<std::string>(passwordVariant);
+        }
+        else
+        {
+            const auto &error = std::get<myapp::Error>(passwordVariant);
+            LOG_ERROR << error.GetMessage();
+            errors.push_back(error);
+        }
+    }
+
+    if (ErrorResponse(HttpStatusCode::k400BadRequest, errors, callback))
+    {
+        return;
+    }
+
+    const auto newUser = userDb_->ChangePassword(*user, password);
+
+    auto response = HttpResponse::newHttpResponse();
+    response->setStatusCode(k204NoContent);
+    callback(response);
 }
 
 bool User::ErrorResponse(HttpStatusCode code, const std::vector<myapp::Error> &errors, Callback &callback)
@@ -354,22 +519,46 @@ std::variant<myapp::UserPtr, myapp::Error> User::AuthorizateUser(const HttpReque
     return user;
 }
 
-std::variant<Json::Value, std::vector<myapp::Error>> User::UserMethodProcess(HttpMethod method, myapp::User &user)
+std::variant<User::ResponseData, std::vector<myapp::Error>> User::UserMethodProcess(const HttpRequestPtr &request, myapp::User &user)
 {
-    std::vector<myapp::Error> errors;
-
-    switch (method)
+    switch (request->getMethod())
     {
     case Get:
-        return GetUser(user);
+        return ResponseData{ k200OK, GetUser(user)};
     case Put:
+    {
+        auto errors = PutUser(request,user);
+        if(errors.empty())
+        {
+            return ResponseData{k204NoContent };
+        }
+        else
+        {
+            return errors;
+        }
+    }
     case Patch:
+    {
+        auto patchResult = PatchUser(request,user);
+        if(std::holds_alternative<Json::Value>(patchResult))
+        {
+            return ResponseData{k200OK,std::get<Json::Value>(patchResult)};
+        }
+        else
+        {
+            return std::get<std::vector<myapp::Error>>(patchResult);
+        }
+    }
     case Delete:
+    {
+        userDb_->DeleteUser(user);
+        return ResponseData{k204NoContent};
+    }
     default:
-        return errors;
+        break;
     }
 
-    return errors;
+    return {};
 }
 
 Json::Value User::GetUser(const myapp::User &user)
@@ -383,3 +572,106 @@ Json::Value User::GetUser(const myapp::User &user)
 
     return result;
 }
+
+std::vector<myapp::Error> User::PutUser(const HttpRequestPtr &request, myapp::User &user)
+{
+    auto requestJsonBody = request->getJsonObject();
+
+    if (!requestJsonBody)
+    {
+        myapp::Error error(myapp::Error::Code::ExpectJsonBody);
+        return { error };
+    }
+
+    myapp::User::Info newInfo;
+    std::vector<myapp::Error> errors;
+
+    const auto firstNameResult = myapp::GetString( myapp::key::info::firstName, *requestJsonBody );
+    if(std::holds_alternative<std::string>(firstNameResult))
+    {
+        newInfo.firstName = std::get<std::string>(firstNameResult);
+    }
+    else
+    {
+        errors.push_back(std::get<myapp::Error>(firstNameResult));
+    }
+
+    const auto lastNameResult = myapp::GetString(myapp::key::info::lastName, *requestJsonBody );
+    if(std::holds_alternative<std::string>(lastNameResult))
+    {
+        newInfo.lastName = std::get<std::string>(lastNameResult);
+    }
+    else
+    {
+        errors.push_back(std::get<myapp::Error>(lastNameResult));
+    }
+
+    if(!errors.empty())
+    {
+        return errors;
+    }
+
+    user.SetInfo(std::move(newInfo));
+
+    return {};
+}
+
+std::variant<Json::Value, std::vector<myapp::Error>> User::PatchUser(const HttpRequestPtr &request, myapp::User &user)
+{
+    const auto requestJsonBody = request->getJsonObject();
+
+    if (!requestJsonBody)
+    {
+        myapp::Error error(myapp::Error::Code::ExpectJsonBody);
+        return std::vector{ error };
+    }
+
+    myapp::User::Info newInfo = user.GetInfo();
+    std::vector<myapp::Error> errors;
+    bool haveChange = false;
+
+    const auto firstNameResult = myapp::GetString( myapp::key::info::firstName, *requestJsonBody );
+    if(std::holds_alternative<std::string>(firstNameResult))
+    {
+        newInfo.firstName = std::get<std::string>(firstNameResult);
+        haveChange |= true;
+    }
+    else
+    {
+       const auto error =std::get<myapp::Error>(firstNameResult);
+        if(myapp::Error::Code::KeyNotFound != error.GetCode())
+        {
+            errors.push_back(error);
+        }
+    }
+
+    const auto lastNameResult = myapp::GetString(myapp::key::info::lastName, *requestJsonBody );
+    if(std::holds_alternative<std::string>(lastNameResult))
+    {
+        newInfo.lastName = std::get<std::string>(lastNameResult);
+        haveChange |= true;
+    }
+    else
+    {
+        const auto error =std::get<myapp::Error>(lastNameResult);
+        if(myapp::Error::Code::KeyNotFound != error.GetCode())
+        {
+            errors.push_back(error);
+        }
+    }
+
+    if(!haveChange)
+    {
+        errors.emplace_back(myapp::Error::Code::KeyNotFound);
+    }
+
+    if(!errors.empty())
+    {
+        return errors;
+    }
+
+    user.SetInfo(std::move(newInfo));
+
+    return GetUser(user);
+}
+

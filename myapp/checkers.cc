@@ -6,9 +6,8 @@
 
 namespace myapp
 {
-    std::variant<std::string, Error> GetUsername(const Json::Value &json)
+    std::variant<std::string, Error> GetString(const std::string& key, const Json::Value &json)
     {
-        static std::string key = key::username;
         const auto val = json.find(key.data(), key.data() + key.length());
         if (!val)
         {
@@ -70,7 +69,7 @@ namespace myapp
 
     std::variant<std::string, Error> ExtractUsername(const Json::Value &json)
     {
-        const auto usernameOrError = GetUsername(json);
+        const auto usernameOrError = GetString(key::username, json);
         if (std::holds_alternative<std::string>(usernameOrError))
         {
             std::string username = std::get<std::string>(usernameOrError);
@@ -87,25 +86,6 @@ namespace myapp
         {
             return std::get<Error>(usernameOrError);
         }
-    }
-
-    std::variant<std::string, Error> GetPassword(const Json::Value &json)
-    {
-        static std::string key = key::password;
-        const auto val = json.find(key.data(), key.data() + key.length());
-        if (!val)
-        {
-            return Error(Error::Code::KeyNotFound,
-                         {{"key", key}});
-        }
-
-        if (!val->isString())
-        {
-            return Error(Error::Code::InvalidType, {{"key", key},
-                                                    {"type", "string"}});
-        }
-
-        return val->asString();
     }
 
     std::optional<Error> CheckPassword(const std::string &password)
@@ -145,7 +125,7 @@ namespace myapp
 
     std::variant<std::string, Error> ExtractPassword(const Json::Value &json)
     {
-        const auto passwordOrError = GetPassword(json);
+        const auto passwordOrError = GetString(key::password, json);
         if (std::holds_alternative<std::string>(passwordOrError))
         {
             std::string password = std::get<std::string>(passwordOrError);

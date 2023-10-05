@@ -30,12 +30,16 @@ namespace api
       METHOD_ADD(User::Create, "/create", Post);
       METHOD_ADD(User::List, "/list?limit={1}&offset={2}", Get);
       METHOD_ADD(User::Change, "/{1}", Get, Put, Patch, Delete);
+      METHOD_ADD(User::ChangeUsername, "/{1}/change_username", Put);
+      METHOD_ADD(User::ChangePassword, "/{1}/change_password", Put);
 
       METHOD_LIST_END
 
       void Create(const HttpRequestPtr &request, Callback &&callback);
       void List(const HttpRequestPtr &request, Callback &&callback, std::string limit, std::string offset);
       void Change(const HttpRequestPtr &request, Callback &&callback, std::string userId);
+      void ChangeUsername(const HttpRequestPtr &request, Callback &&callback, std::string userId);
+      void ChangePassword(const HttpRequestPtr &request, Callback &&callback, std::string userId);
 
     private:
       static bool ErrorResponse( HttpStatusCode code, const std::vector< myapp::Error >& errors, Callback &callback);
@@ -46,9 +50,19 @@ namespace api
 
       std::variant<myapp::UserPtr, myapp::Error> AuthorizateUser(const HttpRequestPtr &request) const;
 
-      static std::variant<Json::Value, std::vector<myapp::Error>> UserMethodProcess(HttpMethod method, myapp::User& user);
+      struct ResponseData
+      {
+        HttpStatusCode code;
+        Json::Value body;
+      };
+
+      std::variant<ResponseData, std::vector<myapp::Error>> UserMethodProcess(const HttpRequestPtr &request, myapp::User& user);
 
       static Json::Value GetUser(const myapp::User& user);
+
+      static std::vector<myapp::Error> PutUser(const HttpRequestPtr &request, myapp::User& user);
+
+      static std::variant<Json::Value, std::vector<myapp::Error>> PatchUser(const HttpRequestPtr &request, myapp::User& user);
 
     private:
       myapp::UserDbPtr userDb_;

@@ -10,6 +10,11 @@ namespace myapp
     {
     }
 
+    User::User(const User &user, const std::string &newUsername)
+    : username_(newUsername), password_(user.password_), id_(user.id_), info_(user.info_)
+    {
+    }
+
     const std::string &User::GetUsername() const
     {
         return username_;
@@ -35,8 +40,14 @@ namespace myapp
         return info_;
     }
 
-    void User::SetInfo(const Info &&info)
+    void User::SetInfo(const Info &info)
+    {
+        info_ = info;
+    }
+
+    void User::SetInfo(Info &&info)
     {
         info_ = std::move(info);
     }
+
 }

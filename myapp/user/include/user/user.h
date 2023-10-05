@@ -18,6 +18,8 @@ namespace myapp
 
         explicit User(const std::string &username, const std::string &password, UserId id);
 
+        explicit User(const User& user, const std::string& newUsername);
+
         virtual ~User() = default;
 
         const std::string &GetUsername() const;
@@ -30,7 +32,8 @@ namespace myapp
 
         const Info &GetInfo() const;
 
-        void SetInfo(const Info &&info);
+        void SetInfo(const Info &info);
+        void SetInfo(Info &&info);
 
     private:
         std::string username_;
