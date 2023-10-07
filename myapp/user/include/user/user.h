@@ -3,44 +3,43 @@
 #include <string>
 #include <memory>
 
-namespace myapp
-{
-    using UserId = uint64_t;
+namespace myapp {
 
-    class User
-    {
-    public:
-        struct Info
-        {
-            std::string firstName;
-            std::string lastName;
-        };
+using UserId = uint64_t;
 
-        explicit User(const std::string &username, const std::string &password, UserId id);
+class User {
+public:
+  struct Info {
+    std::string firstName;
+    std::string lastName;
+  };
 
-        explicit User(const User& user, const std::string& newUsername);
+  explicit User(const std::string &username, const std::string &password, UserId id);
 
-        virtual ~User() = default;
+  explicit User(const User &user, const std::string &newUsername);
 
-        const std::string &GetUsername() const;
+  virtual ~User() = default;
 
-        const std::string &GetPasswordHash() const;
+  const std::string &GetUsername() const;
 
-        bool CheckPassword(const std::string &password) const;
+  const std::string &GetPasswordHash() const;
 
-        UserId GetId() const;
+  bool CheckPassword(const std::string &password) const;
 
-        const Info &GetInfo() const;
+  UserId GetId() const;
 
-        void SetInfo(const Info &info);
-        void SetInfo(Info &&info);
+  const Info &GetInfo() const;
 
-    private:
-        std::string username_;
-        std::string password_;
-        UserId id_;
-        Info info_;
-    };
+  void SetInfo(const Info &info);
+  void SetInfo(Info &&info);
 
-    using UserPtr = std::shared_ptr<User>;
+private:
+  std::string username_;
+  std::string password_;
+  UserId id_;
+  Info info_;
+};
+
+using UserPtr = std::shared_ptr<User>;
+
 }

@@ -4,48 +4,45 @@
 
 #include <string>
 
-namespace myapp
-{
-    class Error
-    {
-    public:
+namespace myapp {
 
-        using Args = std::map<std::string, std::string>;
+class Error {
+public:
+  using Args = std::map<std::string, std::string>;
 
-        enum class Code
-        {
-            ExpectJsonBody,
+  enum class Code {
+    ExpectJsonBody,
 
-            ConvertParameterFailed,
+    ConvertParameterFailed,
 
-            KeyNotFound,
-            InvalidType,
-            InvalidValue,
+    KeyNotFound,
+    InvalidType,
+    InvalidValue,
 
-            UserAlreadyExist,
+    UserAlreadyExist,
 
-            AuthorizateFailed,
+    AuthorizateFailed,
 
-            InvalidUserId,
-        };
+    InvalidUserId,
+  };
 
-        explicit Error(Code ec);
+  explicit Error(Code ec);
 
-        Error(Code ec, const Args &args);
+  Error(Code ec, const Args &args);
 
-        virtual ~Error() = default;
+  virtual ~Error() = default;
 
-        Code GetCode() const;
+  Code GetCode() const;
 
-        const std::string &GetMessage() const;
+  const std::string &GetMessage() const;
 
-        const Args &GetArgs() const;
+  const Args &GetArgs() const;
 
-        Json::Value GetJson() const;
+  Json::Value GetJson() const;
 
-    private:
-        Code ec_;
-        Args args_;
-    };
+private:
+  Code ec_;
+  Args args_;
+};
 
 } // namespace myapp

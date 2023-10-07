@@ -4,52 +4,52 @@
 
 #include <unordered_map>
 
-namespace myapp
-{
-    class UserDb
-    {
-        using UserWeak = std::weak_ptr<UserPtr::element_type>;
+namespace myapp {
 
-    public:
-        using UserDbType = std::unordered_map<UserId, UserPtr>;
-        using UserDbConstIt = UserDbType::const_iterator;
-        using UserDbIt = UserDbType::iterator;
+class UserDb {
+  using UserWeak = std::weak_ptr<UserPtr::element_type>;
 
-        explicit UserDb();
+public:
+  using UserDbType = std::unordered_map<UserId, UserPtr>;
+  using UserDbConstIt = UserDbType::const_iterator;
+  using UserDbIt = UserDbType::iterator;
 
-        virtual ~UserDb() = default;
+  explicit UserDb();
 
-        UserPtr AddUser(const std::string &username, const std::string &password);
+  virtual ~UserDb() = default;
 
-        UserPtr GetUser(UserId id) const;
+  UserPtr AddUser(const std::string &username, const std::string &password);
 
-        UserPtr GetUser(const std::string &username) const;
+  UserPtr GetUser(UserId id) const;
 
-        void DeleteUser(UserId id);
+  UserPtr GetUser(const std::string &username) const;
 
-        void DeleteUser(const std::string& username);
+  void DeleteUser(UserId id);
 
-        void DeleteUser(const User& user);
+  void DeleteUser(const std::string &username);
 
-        UserPtr ChangeUsername(const User& user, const std::string& newUsername);
+  void DeleteUser(const User &user);
 
-        UserPtr ChangePassword(const User& user, const std::string& newPassword);
+  UserPtr ChangeUsername(const User &user, const std::string &newUsername);
 
-        UserDbConstIt begin() const;
+  UserPtr ChangePassword(const User &user, const std::string &newPassword);
 
-        UserDbConstIt end() const;
+  UserDbConstIt begin() const;
 
-        UserDbIt begin();
+  UserDbConstIt end() const;
 
-        UserDbIt end();
+  UserDbIt begin();
 
-        size_t size() const;
+  UserDbIt end();
 
-    private:
-        std::unordered_map<UserId, UserPtr> db_;
-        std::unordered_map<std::string, UserWeak> loginIndex_;
-        UserId lastId_;
-    };
+  size_t size() const;
 
-    using UserDbPtr = std::shared_ptr< UserDb >;
+private:
+  std::unordered_map<UserId, UserPtr> db_;
+  std::unordered_map<std::string, UserWeak> loginIndex_;
+  UserId lastId_;
+};
+
+using UserDbPtr = std::shared_ptr<UserDb>;
+
 }
