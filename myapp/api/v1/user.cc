@@ -1,11 +1,10 @@
-#include <myapp/api_v1_user.h>
-#include <myapp/checkers.h>
-#include <myapp/api_keys.h>
+#include <myapp/api/v1/user.h>
+#include <libapi/checkers.h>
+#include <libapi/api_keys.h>
 
 #include <cpp-base64/base64.h>
 
 #include <string>
-#include <iomanip>
 #include <optional>
 
 using namespace api::v1;
@@ -77,8 +76,8 @@ void User::Create(const HttpRequestPtr &request, Callback &&callback) {
 
 void User::List(const HttpRequestPtr &request,
                 std::function<void(const HttpResponsePtr &)> &&callback,
-                std::string limitParam,
-                std::string offsetParam) {
+                const std::string &limitParam,
+                const std::string &offsetParam) {
   LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
             << ", limit: " << limitParam << ", offset: " << offsetParam;
 
@@ -175,7 +174,7 @@ void User::List(const HttpRequestPtr &request,
 
 void User::Change(const HttpRequestPtr &request,
                   std::function<void(const HttpResponsePtr &)> &&callback,
-                  std::string userId) {
+                  const std::string &userId) {
   LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
             << ", userId: " << userId;
 
@@ -224,7 +223,7 @@ void User::Change(const HttpRequestPtr &request,
   User::HttpResponse(k400BadRequest, callback);
 }
 
-void User::ChangeUsername(const HttpRequestPtr &request, Callback &&callback, std::string userId) {
+void User::ChangeUsername(const HttpRequestPtr &request, Callback &&callback, const std::string &userId) {
   LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
             << ", userId: " << userId;
 
@@ -302,7 +301,7 @@ void User::ChangeUsername(const HttpRequestPtr &request, Callback &&callback, st
   callback(response);
 }
 
-void User::ChangePassword(const HttpRequestPtr &request, User::Callback &&callback, std::string userId) {
+void User::ChangePassword(const HttpRequestPtr &request, User::Callback &&callback, const std::string &userId) {
   LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
             << ", userId: " << userId;
 

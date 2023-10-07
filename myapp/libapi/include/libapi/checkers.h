@@ -1,6 +1,6 @@
 #pragma once
 
-#include <myapp/error.h>
+#include <libapi/error.h>
 
 #include <string>
 #include <optional>
