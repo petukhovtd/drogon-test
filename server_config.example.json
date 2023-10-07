@@ -1,0 +1,10 @@
+{
+  "app": {
+    "number_of_threads": 1
+  },
+  "listeners": [
+    {
+      "port": 3000
+    }
+  ]
+}
