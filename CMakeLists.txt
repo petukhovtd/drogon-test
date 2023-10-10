@@ -6,4 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED 17)
 
 add_subdirectory(third_party)
 
+enable_testing()
+add_custom_target(build-test)
+
 add_subdirectory(myapp)
