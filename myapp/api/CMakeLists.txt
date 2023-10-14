@@ -4,7 +4,7 @@ add_subdirectory(test)
 
 set(SOURCE
     src/api_user.cpp
-    src/user.cc
+    src/user_http_controller.cpp
 )
 
 add_library(${PROJECT_NAME} ${SOURCE})

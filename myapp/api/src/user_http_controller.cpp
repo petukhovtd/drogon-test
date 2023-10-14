@@ -1,4 +1,4 @@
-#include <api/v1/user.h>
+#include <api/v1/user_http_controller.h>
 #include <libapi/checkers.h>
 #include <libapi/api_keys.h>
 
@@ -7,13 +7,13 @@
 #include <string>
 #include <optional>
 
-using namespace api::v1;
+namespace myapp {
 
-User::User(const myapp::UserDbPtr &userDb)
+UserHttpController::UserHttpController(const myapp::UserDbPtr &userDb)
     : userDb_(userDb) {
 }
 
-void User::Create(const HttpRequestPtr &request, Callback &&callback) {
+void UserHttpController::Create(const drogon::HttpRequestPtr &request, Callback &&callback) {
   LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort();
 
   auto requestJsonBody = request->getJsonObject();
@@ -22,7 +22,7 @@ void User::Create(const HttpRequestPtr &request, Callback &&callback) {
     myapp::Error error(myapp::Error::Code::ExpectJsonBody);
     LOG_ERROR << error.GetMessage();
 
-    ErrorResponse(HttpStatusCode::k400BadRequest, {error}, callback);
+    ErrorResponse(drogon::HttpStatusCode::k400BadRequest, {error}, callback);
     return;
   }
 
@@ -52,7 +52,7 @@ void User::Create(const HttpRequestPtr &request, Callback &&callback) {
     }
   }
 
-  if (ErrorResponse(HttpStatusCode::k400BadRequest, errors, callback)) {
+  if (ErrorResponse(drogon::HttpStatusCode::k400BadRequest, errors, callback)) {
     return;
   }
 
@@ -60,7 +60,7 @@ void User::Create(const HttpRequestPtr &request, Callback &&callback) {
   if (!user) {
     myapp::Error error(myapp::Error::Code::UserAlreadyExist, {{myapp::key::username, username}});
     LOG_ERROR << error.GetMessage();
-    ErrorResponse(HttpStatusCode::k409Conflict, {error}, callback);
+    ErrorResponse(drogon::HttpStatusCode::k409Conflict, {error}, callback);
     return;
   }
 
@@ -71,13 +71,13 @@ void User::Create(const HttpRequestPtr &request, Callback &&callback) {
   Json::Value response;
   response[myapp::key::userId] = static_cast<Json::UInt64>(user->GetId());
 
-  JsonResponse(k201Created, response, callback);
+  JsonResponse(drogon::k201Created, response, callback);
 }
 
-void User::List(const HttpRequestPtr &request,
-                std::function<void(const HttpResponsePtr &)> &&callback,
-                const std::string &limitParam,
-                const std::string &offsetParam) {
+void UserHttpController::List(const drogon::HttpRequestPtr &request,
+                              std::function<void(const drogon::HttpResponsePtr &)> &&callback,
+                              const std::string &limitParam,
+                              const std::string &offsetParam) {
   LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
             << ", limit: " << limitParam << ", offset: " << offsetParam;
 
@@ -103,7 +103,7 @@ void User::List(const HttpRequestPtr &request,
     }
   }
 
-  if (ErrorResponse(HttpStatusCode::k400BadRequest, errors, callback)) {
+  if (ErrorResponse(drogon::HttpStatusCode::k400BadRequest, errors, callback)) {
     return;
   }
 
@@ -144,7 +144,7 @@ void User::List(const HttpRequestPtr &request,
 
   if (0 == size) {
     LOG_INFO << "Empty response";
-    JsonResponse(k200OK, responseJsonBody, callback);
+    JsonResponse(drogon::k200OK, responseJsonBody, callback);
     return;
   }
 
@@ -167,14 +167,14 @@ void User::List(const HttpRequestPtr &request,
 
   LOG_INFO << "User list. response size: " << size;
 
-  auto response = HttpResponse::newHttpJsonResponse(responseJsonBody);
-  response->setStatusCode(k200OK);
+  auto response = drogon::HttpResponse::newHttpJsonResponse(responseJsonBody);
+  response->setStatusCode(drogon::k200OK);
   callback(response);
 }
 
-void User::Change(const HttpRequestPtr &request,
-                  std::function<void(const HttpResponsePtr &)> &&callback,
-                  const std::string &userId) {
+void UserHttpController::Change(const drogon::HttpRequestPtr &request,
+                                std::function<void(const drogon::HttpResponsePtr &)> &&callback,
+                                const std::string &userId) {
   LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
             << ", userId: " << userId;
 
@@ -182,7 +182,7 @@ void User::Change(const HttpRequestPtr &request,
   if (!userIdOpt.has_value()) {
     myapp::Error error(myapp::Error::Code::ConvertParameterFailed);
     LOG_ERROR << error.GetMessage();
-    ErrorResponse(k400BadRequest, {error}, callback);
+    ErrorResponse(drogon::k400BadRequest, {error}, callback);
     return;
   }
 
@@ -191,9 +191,9 @@ void User::Change(const HttpRequestPtr &request,
     // good
   } else if (std::holds_alternative<myapp::Error>(authRes)) {
     auto error = std::get<myapp::Error>(authRes);
-    auto response = HttpResponse::newHttpJsonResponse(error.GetJson());
+    auto response = drogon::HttpResponse::newHttpJsonResponse(error.GetJson());
     response->addHeader("WWW-Authenticate", "Basic");
-    response->setStatusCode(k401Unauthorized);
+    response->setStatusCode(drogon::k401Unauthorized);
     callback(response);
     return;
   }
@@ -204,7 +204,7 @@ void User::Change(const HttpRequestPtr &request,
       auto error =
           myapp::Error(myapp::Error::Code::InvalidUserId, {{"why", "authorization user and parameter not equal"}});
       LOG_ERROR << error.GetMessage();
-      ErrorResponse(k400BadRequest, {error}, callback);
+      ErrorResponse(drogon::k400BadRequest, {error}, callback);
       return;
     }
   }
@@ -216,14 +216,14 @@ void User::Change(const HttpRequestPtr &request,
     return;
   } else if (std::holds_alternative<std::vector<myapp::Error>>(processResult)) {
     auto responseErrors = std::get<std::vector<myapp::Error>>(processResult);
-    ErrorResponse(HttpStatusCode::k400BadRequest, responseErrors, callback);
+    ErrorResponse(drogon::HttpStatusCode::k400BadRequest, responseErrors, callback);
     return;
   }
 
-  User::HttpResponse(k400BadRequest, callback);
+  UserHttpController::HttpResponse(drogon::k400BadRequest, callback);
 }
 
-void User::ChangeUsername(const HttpRequestPtr &request, Callback &&callback, const std::string &userId) {
+void UserHttpController::ChangeUsername(const drogon::HttpRequestPtr &request, Callback &&callback, const std::string &userId) {
   LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
             << ", userId: " << userId;
 
@@ -231,7 +231,7 @@ void User::ChangeUsername(const HttpRequestPtr &request, Callback &&callback, co
   if (!userIdOpt.has_value()) {
     myapp::Error error(myapp::Error::Code::ConvertParameterFailed);
     LOG_ERROR << error.GetMessage();
-    ErrorResponse(k400BadRequest, {error}, callback);
+    ErrorResponse(drogon::k400BadRequest, {error}, callback);
     return;
   }
 
@@ -240,7 +240,7 @@ void User::ChangeUsername(const HttpRequestPtr &request, Callback &&callback, co
     myapp::Error error(myapp::Error::Code::ExpectJsonBody);
     LOG_ERROR << error.GetMessage();
 
-    ErrorResponse(HttpStatusCode::k400BadRequest, {error}, callback);
+    ErrorResponse(drogon::HttpStatusCode::k400BadRequest, {error}, callback);
     return;
   }
 
@@ -249,9 +249,9 @@ void User::ChangeUsername(const HttpRequestPtr &request, Callback &&callback, co
     // good
   } else if (std::holds_alternative<myapp::Error>(authRes)) {
     auto error = std::get<myapp::Error>(authRes);
-    auto response = HttpResponse::newHttpJsonResponse(error.GetJson());
+    auto response = drogon::HttpResponse::newHttpJsonResponse(error.GetJson());
     response->addHeader("WWW-Authenticate", "Basic");
-    response->setStatusCode(k401Unauthorized);
+    response->setStatusCode(drogon::k401Unauthorized);
     callback(response);
     return;
   }
@@ -262,7 +262,7 @@ void User::ChangeUsername(const HttpRequestPtr &request, Callback &&callback, co
       auto error =
           myapp::Error(myapp::Error::Code::InvalidUserId, {{"why", "authorization user and parameter not equal"}});
       LOG_ERROR << error.GetMessage();
-      ErrorResponse(k400BadRequest, {error}, callback);
+      ErrorResponse(drogon::k400BadRequest, {error}, callback);
       return;
     }
   }
@@ -280,7 +280,7 @@ void User::ChangeUsername(const HttpRequestPtr &request, Callback &&callback, co
     }
   }
 
-  if (ErrorResponse(HttpStatusCode::k400BadRequest, errors, callback)) {
+  if (ErrorResponse(drogon::HttpStatusCode::k400BadRequest, errors, callback)) {
     return;
   }
 
@@ -288,7 +288,7 @@ void User::ChangeUsername(const HttpRequestPtr &request, Callback &&callback, co
   if (!newUser) {
     myapp::Error error(myapp::Error::Code::UserAlreadyExist, {{myapp::key::username, username}});
     LOG_ERROR << error.GetMessage();
-    ErrorResponse(HttpStatusCode::k404NotFound, {error}, callback);
+    ErrorResponse(drogon::HttpStatusCode::k404NotFound, {error}, callback);
     return;
   }
 
@@ -296,12 +296,14 @@ void User::ChangeUsername(const HttpRequestPtr &request, Callback &&callback, co
   userJson[myapp::key::userId] = static_cast<Json::UInt64>(newUser->GetId());
   userJson[myapp::key::username] = newUser->GetUsername();
 
-  auto response = HttpResponse::newHttpJsonResponse(userJson);
-  response->setStatusCode(k200OK);
+  auto response = drogon::HttpResponse::newHttpJsonResponse(userJson);
+  response->setStatusCode(drogon::k200OK);
   callback(response);
 }
 
-void User::ChangePassword(const HttpRequestPtr &request, User::Callback &&callback, const std::string &userId) {
+void UserHttpController::ChangePassword(const drogon::HttpRequestPtr &request,
+                                        UserHttpController::Callback &&callback,
+                                        const std::string &userId) {
   LOG_DEBUG << request->getPeerAddr().toIp() << ":" << request->getPeerAddr().toPort()
             << ", userId: " << userId;
 
@@ -309,7 +311,7 @@ void User::ChangePassword(const HttpRequestPtr &request, User::Callback &&callba
   if (!userIdOpt.has_value()) {
     myapp::Error error(myapp::Error::Code::ConvertParameterFailed);
     LOG_ERROR << error.GetMessage();
-    ErrorResponse(k400BadRequest, {error}, callback);
+    ErrorResponse(drogon::k400BadRequest, {error}, callback);
     return;
   }
 
@@ -318,7 +320,7 @@ void User::ChangePassword(const HttpRequestPtr &request, User::Callback &&callba
     myapp::Error error(myapp::Error::Code::ExpectJsonBody);
     LOG_ERROR << error.GetMessage();
 
-    ErrorResponse(HttpStatusCode::k400BadRequest, {error}, callback);
+    ErrorResponse(drogon::HttpStatusCode::k400BadRequest, {error}, callback);
     return;
   }
 
@@ -327,9 +329,9 @@ void User::ChangePassword(const HttpRequestPtr &request, User::Callback &&callba
     // good
   } else if (std::holds_alternative<myapp::Error>(authRes)) {
     auto error = std::get<myapp::Error>(authRes);
-    auto response = HttpResponse::newHttpJsonResponse(error.GetJson());
+    auto response = drogon::HttpResponse::newHttpJsonResponse(error.GetJson());
     response->addHeader("WWW-Authenticate", "Basic");
-    response->setStatusCode(k401Unauthorized);
+    response->setStatusCode(drogon::k401Unauthorized);
     callback(response);
     return;
   }
@@ -340,7 +342,7 @@ void User::ChangePassword(const HttpRequestPtr &request, User::Callback &&callba
       auto error =
           myapp::Error(myapp::Error::Code::InvalidUserId, {{"why", "authorization user and parameter not equal"}});
       LOG_ERROR << error.GetMessage();
-      ErrorResponse(k400BadRequest, {error}, callback);
+      ErrorResponse(drogon::k400BadRequest, {error}, callback);
       return;
     }
   }
@@ -358,18 +360,20 @@ void User::ChangePassword(const HttpRequestPtr &request, User::Callback &&callba
     }
   }
 
-  if (ErrorResponse(HttpStatusCode::k400BadRequest, errors, callback)) {
+  if (ErrorResponse(drogon::HttpStatusCode::k400BadRequest, errors, callback)) {
     return;
   }
 
   const auto newUser = userDb_->ChangePassword(*user, password);
 
-  auto response = HttpResponse::newHttpResponse();
-  response->setStatusCode(k204NoContent);
+  auto response = drogon::HttpResponse::newHttpResponse();
+  response->setStatusCode(drogon::k204NoContent);
   callback(response);
 }
 
-bool User::ErrorResponse(HttpStatusCode code, const std::vector<myapp::Error> &errors, Callback &callback) {
+bool UserHttpController::ErrorResponse(drogon::HttpStatusCode code,
+                                       const std::vector<myapp::Error> &errors,
+                                       Callback &callback) {
   if (errors.empty()) {
     return false;
   }
@@ -387,19 +391,19 @@ bool User::ErrorResponse(HttpStatusCode code, const std::vector<myapp::Error> &e
   return true;
 }
 
-void User::JsonResponse(HttpStatusCode code, const Json::Value &json, Callback &callback) {
-  auto response = HttpResponse::newHttpJsonResponse(json);
+void UserHttpController::JsonResponse(drogon::HttpStatusCode code, const Json::Value &json, Callback &callback) {
+  auto response = drogon::HttpResponse::newHttpJsonResponse(json);
   response->setStatusCode(code);
   callback(response);
 }
 
-void User::HttpResponse(HttpStatusCode code, Callback &callback) {
-  auto response = HttpResponse::newHttpResponse();
+void UserHttpController::HttpResponse(drogon::HttpStatusCode code, Callback &callback) {
+  auto response = drogon::HttpResponse::newHttpResponse();
   response->setStatusCode(code);
   callback(response);
 }
 
-std::variant<myapp::UserPtr, myapp::Error> User::AuthorizateUser(const HttpRequestPtr &request) const {
+std::variant<myapp::UserPtr, myapp::Error> UserHttpController::AuthorizateUser(const drogon::HttpRequestPtr &request) const {
   const auto &auth = request->getHeader("Authorization");
   if (auth.empty()) {
     auto error = myapp::Error(myapp::Error::Code::AuthorizateFailed, {{"why", "Authorization header don't found"}});
@@ -451,29 +455,30 @@ std::variant<myapp::UserPtr, myapp::Error> User::AuthorizateUser(const HttpReque
   return user;
 }
 
-std::variant<User::ResponseData, std::vector<myapp::Error>> User::UserMethodProcess(const HttpRequestPtr &request,
-                                                                                    myapp::User &user) {
+std::variant<UserHttpController::ResponseData,
+             std::vector<myapp::Error>> UserHttpController::UserMethodProcess(const drogon::HttpRequestPtr &request,
+                                                                              myapp::User &user) {
   switch (request->getMethod()) {
-  case Get:return ResponseData{k200OK, GetUser(user)};
-  case Put: {
+  case drogon::Get:return ResponseData{drogon::k200OK, GetUser(user)};
+  case drogon::Put: {
     auto errors = PutUser(request, user);
     if (errors.empty()) {
-      return ResponseData{k204NoContent};
+      return ResponseData{drogon::k204NoContent};
     } else {
       return errors;
     }
   }
-  case Patch: {
+  case drogon::Patch: {
     auto patchResult = PatchUser(request, user);
     if (std::holds_alternative<Json::Value>(patchResult)) {
-      return ResponseData{k200OK, std::get<Json::Value>(patchResult)};
+      return ResponseData{drogon::k200OK, std::get<Json::Value>(patchResult)};
     } else {
       return std::get<std::vector<myapp::Error>>(patchResult);
     }
   }
-  case Delete: {
+  case drogon::Delete: {
     userDb_->DeleteUser(user);
-    return ResponseData{k204NoContent};
+    return ResponseData{drogon::k204NoContent};
   }
   default:break;
   }
@@ -481,7 +486,7 @@ std::variant<User::ResponseData, std::vector<myapp::Error>> User::UserMethodProc
   return {};
 }
 
-Json::Value User::GetUser(const myapp::User &user) {
+Json::Value UserHttpController::GetUser(const myapp::User &user) {
   Json::Value result;
 
   result[myapp::key::userId] = static_cast<Json::UInt64>(user.GetId());
@@ -492,7 +497,7 @@ Json::Value User::GetUser(const myapp::User &user) {
   return result;
 }
 
-std::vector<myapp::Error> User::PutUser(const HttpRequestPtr &request, myapp::User &user) {
+std::vector<myapp::Error> UserHttpController::PutUser(const drogon::HttpRequestPtr &request, myapp::User &user) {
   auto requestJsonBody = request->getJsonObject();
 
   if (!requestJsonBody) {
@@ -526,7 +531,8 @@ std::vector<myapp::Error> User::PutUser(const HttpRequestPtr &request, myapp::Us
   return {};
 }
 
-std::variant<Json::Value, std::vector<myapp::Error>> User::PatchUser(const HttpRequestPtr &request, myapp::User &user) {
+std::variant<Json::Value, std::vector<myapp::Error>> UserHttpController::PatchUser(const drogon::HttpRequestPtr &request,
+                                                                                   myapp::User &user) {
   const auto requestJsonBody = request->getJsonObject();
 
   if (!requestJsonBody) {
@@ -571,4 +577,6 @@ std::variant<Json::Value, std::vector<myapp::Error>> User::PatchUser(const HttpR
   user.SetInfo(std::move(newInfo));
 
   return GetUser(user);
+}
+
 }
