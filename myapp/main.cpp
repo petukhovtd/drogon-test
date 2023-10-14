@@ -1,6 +1,5 @@
-#include <user/user_db.h>
-#include <myapp/api/v1/user.h>
 #include <myapp/program_args.h>
+#include <api/api_user.h>
 
 #include <drogon/drogon.h>
 
@@ -13,13 +12,9 @@ int main(int argc, char *argv[]) {
       return EXIT_FAILURE;
     }
 
-    auto userDb = std::make_shared<myapp::UserDb>();
-    auto userController = std::make_shared<api::v1::User>(userDb);
+    auto &app = drogon::app().loadConfigFile(options.GetServerConfig());
+    myapp::RegisterUserApi(app).run();
 
-    drogon::app()
-        .loadConfigFile(options.GetServerConfig())
-        .registerController(userController)
-        .run();
   }
   catch (const std::exception &e) {
     std::cerr << e.what() << std::endl;

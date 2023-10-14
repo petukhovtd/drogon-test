@@ -1,4 +1,4 @@
-#include <myapp/api/v1/user.h>
+#include <api/v1/user.h>
 #include <libapi/checkers.h>
 #include <libapi/api_keys.h>
 
@@ -60,7 +60,7 @@ void User::Create(const HttpRequestPtr &request, Callback &&callback) {
   if (!user) {
     myapp::Error error(myapp::Error::Code::UserAlreadyExist, {{myapp::key::username, username}});
     LOG_ERROR << error.GetMessage();
-    ErrorResponse(HttpStatusCode::k404NotFound, {error}, callback);
+    ErrorResponse(HttpStatusCode::k409Conflict, {error}, callback);
     return;
   }
 
