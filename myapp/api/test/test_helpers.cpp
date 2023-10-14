@@ -26,7 +26,7 @@ bool CreateUser(UserMainInfo &userMainInfo) {
 
   auto req = drogon::HttpRequest::newHttpJsonRequest(body);
   req->setMethod(drogon::Post);
-  req->setPath("/api/v1/user/create");
+  req->setPath("/api/v1/user");
 
   const auto response = client->sendRequest(req);
   if (response.first != drogon::ReqResult::Ok) {

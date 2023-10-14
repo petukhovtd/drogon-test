@@ -18,7 +18,7 @@ TEST(CreateUserTest, CreateUserSuccsess) {
 
   auto req = drogon::HttpRequest::newHttpJsonRequest(body);
   req->setMethod(drogon::Post);
-  req->setPath("/api/v1/user/create");
+  req->setPath("/api/v1/user");
 
   auto response = client->sendRequest(req);
   EXPECT_TRUE(response.first == drogon::ReqResult::Ok);
@@ -77,7 +77,7 @@ TEST_P(CreateUserParamFixture, CreateUserError) {
   }();
 
   req->setMethod(drogon::Post);
-  req->setPath("/api/v1/user/create");
+  req->setPath("/api/v1/user");
 
   auto response = client->sendRequest(req);
   EXPECT_TRUE(response.first == drogon::ReqResult::Ok);

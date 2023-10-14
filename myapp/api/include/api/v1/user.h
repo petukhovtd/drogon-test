@@ -24,8 +24,8 @@ public:
 
   METHOD_LIST_BEGIN
 
-    METHOD_ADD(User::Create, "/create", Post);
-    METHOD_ADD(User::List, "/list?limit={1}&offset={2}", Get);
+    METHOD_ADD(User::Create, "", Post);
+    METHOD_ADD(User::List, "?limit={1}&offset={2}", Get);
     METHOD_ADD(User::Change, "/{1}", Get, Put, Patch, Delete);
     METHOD_ADD(User::ChangeUsername, "/{1}/change_username", Put);
     METHOD_ADD(User::ChangePassword, "/{1}/change_password", Put);
