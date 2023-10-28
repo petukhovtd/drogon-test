@@ -132,14 +132,14 @@ void UserHttpController::List(const drogon::HttpRequestPtr &request,
   }
 
   Json::Value responseJsonBody;
-  responseJsonBody["users"] = Json::arrayValue;
-  responseJsonBody["size"] = static_cast<unsigned int>(size);
-  responseJsonBody["total"] = static_cast<unsigned int>(total);
+  responseJsonBody[key::listUsers] = Json::arrayValue;
+  responseJsonBody[key::listSize] = static_cast<unsigned int>(size);
+  responseJsonBody[key::listTotal] = static_cast<unsigned int>(total);
   if (offsetOpt.has_value()) {
-    responseJsonBody["offset"] = static_cast<unsigned int>(offset);
+    responseJsonBody[key::listOffset] = static_cast<unsigned int>(offset);
   }
   if (limitOpt.has_value()) {
-    responseJsonBody["limit"] = static_cast<unsigned int>(limit);
+    responseJsonBody[key::listLimit] = static_cast<unsigned int>(limit);
   }
 
   if (0 == size) {

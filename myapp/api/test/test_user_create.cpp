@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
-
 #include <drogon/drogon.h>
 
 #include "test_helpers.h"
 
 #include <libapi/api_keys.h>
+#include <libapi/checkers.h>
 
 TEST(CreateUserTest, CreateUserSuccsess) {
   const std::string username = "username1";
@@ -21,20 +21,19 @@ TEST(CreateUserTest, CreateUserSuccsess) {
   req->setPath("/api/v1/user");
 
   auto response = client->sendRequest(req);
-  EXPECT_TRUE(response.first == drogon::ReqResult::Ok);
+  EXPECT_EQ(response.first, drogon::ReqResult::Ok);
 
-  const auto httpResponse = response.second;
-  EXPECT_TRUE(httpResponse);
-  EXPECT_TRUE(httpResponse->getStatusCode() == drogon::k201Created);
+  const auto& httpResponse = response.second;
+  ASSERT_TRUE(httpResponse);
+  EXPECT_EQ(httpResponse->getStatusCode(), drogon::k201Created);
 
-  const auto jsonResponse = response.second->getJsonObject();
-  EXPECT_TRUE(jsonResponse);
+  const auto& jsonResponse = response.second->getJsonObject();
+  ASSERT_TRUE(jsonResponse);
 
-  const auto
-      idValue = jsonResponse->find(myapp::key::userId.data(), myapp::key::userId.data() + myapp::key::userId.length());
-  EXPECT_TRUE(idValue);
-  EXPECT_TRUE(idValue->isInt64());
-  auto id = idValue->as<Json::UInt64>();
+  const auto* idValue = myapp::FindKey(myapp::key::userId,*jsonResponse);
+  ASSERT_TRUE(idValue);
+  ASSERT_TRUE(idValue->isInt64());
+  auto id = idValue->asUInt64();
 
   EXPECT_TRUE(myapp::DeleteUser({username, password, id}));
 }
@@ -52,11 +51,11 @@ class CreateUserParamFixture : public testing::TestWithParam<CreateUserParam> {}
 TEST_P(CreateUserParamFixture, CreateUserError) {
   const auto &param = GetParam();
 
+  myapp::UserMainInfo umi;
   if (param.createDuplicate) {
-    myapp::UserMainInfo umi;
     umi.username = param.username.value();
     umi.password = param.password.value();
-    EXPECT_TRUE(myapp::CreateUser(umi));
+    ASSERT_TRUE(myapp::CreateUser(umi));
   }
 
   auto client = myapp::MakeHttpClient();
@@ -80,15 +79,19 @@ TEST_P(CreateUserParamFixture, CreateUserError) {
   req->setPath("/api/v1/user");
 
   auto response = client->sendRequest(req);
-  EXPECT_TRUE(response.first == drogon::ReqResult::Ok);
+  EXPECT_EQ(response.first, drogon::ReqResult::Ok);
 
-  const auto httpResponse = response.second;
-  EXPECT_TRUE(httpResponse);
-  EXPECT_TRUE(httpResponse->getStatusCode() == param.code);
+  const auto& httpResponse = response.second;
+  ASSERT_TRUE(httpResponse);
+  EXPECT_EQ(httpResponse->getStatusCode(), param.code);
 
-  const auto jsonResponse = response.second->getJsonObject();
-  EXPECT_TRUE(jsonResponse);
+  const auto& jsonResponse = response.second->getJsonObject();
+  ASSERT_TRUE(jsonResponse);
   std::cout << response.second->body() << '\n';
+
+  if (param.createDuplicate) {
+    EXPECT_TRUE(myapp::DeleteUser(umi));
+  }
 }
 
 INSTANTIATE_TEST_CASE_P

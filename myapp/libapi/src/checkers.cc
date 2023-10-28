@@ -6,8 +6,12 @@
 
 namespace myapp {
 
+const Json::Value *FindKey(const std::string &key, const Json::Value &json) {
+  return json.find(key.data(), key.data() + key.length());
+}
+
 std::variant<std::string, Error> GetString(const std::string &key, const Json::Value &json) {
-  const auto val = json.find(key.data(), key.data() + key.length());
+  const auto *val = FindKey(key, json);
   if (!val) {
     return Error(Error::Code::KeyNotFound,
                  {{"key", key}});

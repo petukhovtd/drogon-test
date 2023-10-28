@@ -9,6 +9,8 @@
 
 namespace myapp {
 
+const Json::Value *FindKey(const std::string &key, const Json::Value &json);
+
 std::variant<std::string, Error> GetString(const std::string &key, const Json::Value &json);
 
 std::optional<Error> CheckUsername(const std::string &username);

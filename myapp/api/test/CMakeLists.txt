@@ -3,6 +3,7 @@ project(myapp_api_test)
 set(SOURCE
     test_helpers.cpp
     test_user_create.cpp
+    test_user_list.cpp
 )
 
 add_executable(${PROJECT_NAME} test_main.cpp ${SOURCE})
